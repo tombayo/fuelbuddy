@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>iRacing FuelBuddy datadump</title>
+    <script>
+      console.log('SSE: Connecting...')
+      try {
+        var es = new EventSource('/sse')
+      } catch(err) {
+        console.log('SSE: Error connecting.', err)
+      }
+      console.log('SSE: Connected.')
+
+      es.addEventListener('error', (e) => {
+        console.log('SSE: Disconnected.')
+        es.close()
+      });
+      es.addEventListener('message', (e) => { console.log('Server:', e.data) })
+      es.addEventListener('telemetry', (e) => { console.log('Telemetry', JSON.parse(e.data)) })
+      es.addEventListener('session', (e) => { console.log('SessionInfo', JSON.parse(e.data)) }) 
+    </script>
+  </head>
+  <body>
+    <h1>Data dumping in console...</h1>
+  </body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+
+    <title>iRacing FuelBuddy</title>
+
+    <style>
+      body {
+        font-family: monospace;
+      }
+      .lapfuels, .lapfuelcons, .fuelth {
+        text-align: right;
+      }
+      #fastestLap {
+        color: springgreen;
+      }
+      .pitLap {
+        color: coral;
+      }
+    </style>
+  </head>
+  <body class="bg-dark text-light">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-6">
+          <div class="row">
+            <div class="col-6">
+              <div class="d-flex mt-1">
+                <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                  <label class="btn btn-outline-primary active">
+                    <input type="radio" name="KGltrRadio" value="kg" checked> KG
+                  </label>
+                  <label class="btn btn-outline-primary">
+                    <input type="radio" name="KGltrRadio" value="ltr"> Ltr
+                  </label>
+                </div>
+                <button type="button" class="btn btn-outline-primary w-100 ml-1" id="calcbtn"><i class="fas fa-calculator mt-1"></i></button>
+                <button type="button" class="btn btn-outline-primary w-100 mx-1" id="savebtn"><i class="far fa-save mt-1"></i></button>
+                <button type="button" class="btn btn-outline-primary dropdown-toggle w-100" id="historybtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fas fa-history mt-1"></i></button>
+                <div id="historydropdopwn" class="dropdown-menu" aria-labelledby="historybtn">
+                  <a class="dropdown-item" href="#">Action</a>
+                  <a class="dropdown-item" href="#">Another action</a>
+                  <a class="dropdown-item" href="#">Something else here</a>
+                </div>
+              </div>
+              <div class="card bg-primary text-white mt-1">
+                <div class="card-header">Lap Calculations</div>
+                <ul class="list-group list-group-flush h5">
+                  <li class="list-group-item bg-primary">Median ⏱️: <span class="float-right" id="calcs-lapmed">0:00.000</span></li>
+                  <li class="list-group-item bg-primary">Laps to 🏁: <span class="float-right" id="calcs-lapsleft">0</span></li>
+                </ul>
+              </div>
+              <div class="card bg-primary text-white mt-1">
+                <div class="card-header">Fuel Calculations</div>
+                <ul class="list-group list-group-flush h5">
+                  <li class="list-group-item bg-primary">🛢️💧<span class="float-right"><span id="calcs-fuelavg">0</span>/lap</span></li>
+                  <li class="list-group-item bg-primary">🛢️💦<span class="float-right"><span id="calcs-fuellaps">0</span> laps</span></li>
+                  <li class="list-group-item bg-primary">⛽<span class="float-right" id="calcs-fuelneed">0</span></li>
+                </ul>
+              </div>
+              <div class="card bg-primary text-white mt-1">
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item bg-primary">
+                    <select id="selectTotalRaceLength">
+                      <option value="60" selected>60m</option>
+                      <option value="45">45m</option>
+                      <option value="30">30m</option>
+                    </select>  race: <span class="float-right"><span id="calcs-totalfuel">0</span> <span id="calcs-totalfuelunit">kg</span> <span id="calcs-totallaps">0</span> laps</span></li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="card bg-info text-white mt-2">
+                <div class="card-header">Status<span class="float-right" id="clock"></span></div>
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item bg-info" id="localstatus"></li>
+                  <li class="list-group-item bg-info" id="serverstatus"></li>
+                </ul>
+              </div>
+              <div class="card bg-success text-white mt-1">
+                <div class="card-header">Race Info</div>
+                <ul class="list-group list-group-flush h5">
+                  <li class="list-group-item bg-success">Session time: <span class="float-right" id="status-sesstime">0</span></li>
+                  <li class="list-group-item bg-success">Time left: <span class="float-right" id="status-timeleft">0</span></li>
+                  <li class="list-group-item bg-success">Laps: <span class="float-right"><span id="status-currentlap">0</span>/<span id="status-lapstotal">0</span></span></li>
+                  <li class="list-group-item bg-success">Incidents: <span class="float-right"><span id="status-incidents">0</span>x/<span id="status-maxincs">0</span></span></li>
+                  <li class="list-group-item bg-success">Track Temp: <span class="float-right" id="status-tracktemp"></span></li>
+                </ul>
+              </div>
+              <div class="card bg-warning mt-1 text-dark d-none" id="hybrid-card">
+                <div class="card-header">Hybrid Energy</div>
+                <ul class="list-group list-group-flush h5">
+                  <li class="list-group-item bg-warning">
+                    ⚡ Current: 
+                    <div class="float-right">
+                      <span id="status-energynow"></span> <span class="font-weight-bold h4" id="status-energynow-percent"></span>
+                    </div>
+                  </li>
+                  <li class="list-group-item bg-warning">
+                    ⚡ Lap: 
+                    <div class="float-right">
+                      <span id="status-energylap"></span> <span class="font-weight-bold h4" id="status-energylap-percent"></span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12">
+              <div class="card bg-secondary text-white mt-1">
+                <div class="card-header">Pit Time Measurements</div>
+                <table class="table text-white">
+                  <thead>
+                    <tr>
+                      <th scope="col">Lap</th>
+                      <th scope="col">Pit time</th>
+                      <th scope="col">Box time</th>
+                      <th scope="col">Refuel</th>
+                    </tr>
+                  </thead>
+                  <tbody class="h5" id="measure-pittime"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <h1 class="display-4">iRacing FuelBuddy</h1>      
+          <div>Session #<span id="sessionNum"></span>, <span id="sessionName"></span>, <span id="trackname"></span>, <span id="tracknameshort"></span>, <span id="carname"></span></div>
+          <table class="table text-white">
+            <thead>
+              <th>Lap #</th>
+              <th>Lap Time</th>
+              <th class="fuelth">Total Fuel Left</th>
+              <th class="fuelth">Fuel Used</th>
+              <th>Incs</th>
+            </thead>
+            <tbody id="laps" class="h2"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <!-- Optional JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.20.1/moment.min.js" integrity="sha256-ABVkpwb9K9PxubvRrHMkk6wmWcIHUE9eBxNZLXYQ84k=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-duration-format/2.2.0/moment-duration-format.min.js" integrity="sha256-n9gK42HlNOjiMXeF+qx4u9rd3mpWKyYFxS8D5+uSyu4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/EventEmitter/5.2.5/EventEmitter.js" integrity="sha256-RT8Ol2aBGDwMgsV7FavjYvi7xE3ZT9TEQ2uxN1V8YTQ=" crossorigin="anonymous"></script>
+    <script src="client.js"></script>
+  </body>
+</html>
