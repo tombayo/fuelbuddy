@@ -1,12 +1,12 @@
-const SSE   = require("sse-node")
-const app   = require("express")()
-const fs    = require("fs")
-const path  = require("path")
-const irsdk = require("node-irsdk")
-const bodyP = require("body-parser")
-const conf  = {timestamp: Date.now(),telemetryUpdateInterval: 500, sessionInfoUpdateInterval: 15000}
-const opt   = {root: __dirname}
-const CLarg = (typeof(process.argv[2]) === 'undefined') ? false:process.argv[2]
+const app             = require("express")()
+const {createSession} = require("better-sse")
+const fs              = require("fs")
+const path            = require("path")
+const irsdk           = require("node-irsdk-2021")
+const bodyP           = require("body-parser")
+const conf            = {timestamp: Date.now(),telemetryUpdateInterval: 500, sessionInfoUpdateInterval: 15000}
+const opt             = {root: __dirname}
+const CLarg           = (typeof(process.argv[2]) === 'undefined') ? false:process.argv[2]
 
 const { MongoClient } = require("mongodb")
 const mongo           = new MongoClient("mongodb://192.168.2.60:27017",{useUnifiedTopology: true})
@@ -14,13 +14,13 @@ const mongo           = new MongoClient("mongodb://192.168.2.60:27017",{useUnifi
 irsdk.init(conf)
 
 var DBconnected       = false
-var SSEconnected      = false
+var SSEsession      = false
 var iRacingConnected  = false
 var iRacing           = irsdk.getInstance()
 var trackSession      = {id:0,tick:0}
 
 function SSEsend(data, type) {
-  if (SSEconnected) SSEconnected.send(data,type)
+  if (SSEsession.isConnected) SSEsession.push(type,data)
 }
 
 function handleData(data) {
@@ -70,7 +70,7 @@ async function saveDataToDB(data, type, id) {
     let collection = db.collection(''+id)
 
     await collection.createIndex({timestamp: 1},{unique:true})
-    await collection.updateOne({timestamp:data.timestamp},data,{upsert:true})
+    await collection.updateOne({timestamp:data.timestamp},{$set:data},{upsert:true})
     //await collection.insertOne(data) <-- old code for reference, might need to swap it for quick debug.
   }
 }
@@ -96,7 +96,7 @@ function saveDataToFile(data, type) {
 
 setInterval(() => {
   if (!iRacingConnected) console.log('Waiting for iRacing...')
-  if (!SSEconnected) console.log('Waiting for Client...')
+  if (!SSEsession.isConnected) console.log('Waiting for Client...')
   if (!iRacingConnected) SSEsend('Server: Waiting for iRacing...','message')
 },15000)
 
@@ -130,15 +130,14 @@ iRacing.on('SessionInfo', handleData)
 app.use(bodyP.json())
 app.get("/", (req, res) => { res.sendFile('client.html',opt) })
 app.get("/client.js", (req, res) => { res.sendFile('client.js',opt) })
-app.get("/sse", (req, res) => {
+app.get("/sse", async (req, res) => {
+  const client = await createSession(req, res)
   console.log('Client Connected')
-  const client = SSE(req, res)
-  SSEconnected = client
+  SSEsession = client
 
   if (iRacingConnected) {
-    client.send('Server: iRacing connected.', 'message')
+    client.push('Server: iRacing connected.', 'message')
   }
 
-  client.onClose(() => SSEconnected = false)
 })
-app.listen(80, () => console.log('Listening on Port 80...'))
+app.listen(80, () => console.log('Listening on http://localhost'))

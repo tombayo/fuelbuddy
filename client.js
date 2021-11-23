@@ -523,7 +523,7 @@ function SSEinit() {
 
   es.addEventListener('open', (e) => { $('#localstatus').html('SSE: Connected.') })
   es.addEventListener('error', (e) => { SSEerror() })
-  es.addEventListener('message', (e) => { SSEmessage(e.data) })
+  es.addEventListener('message', (e) => { SSEmessage(JSON.parse(e.data)) })
   es.addEventListener('telemetry', (e) => { SSEtelemetry(JSON.parse(e.data)) })
   es.addEventListener('session', (e) => { SSEsession(JSON.parse(e.data)) })
   es.addEventListener('exit', (e) => { SSEexit(es) })
