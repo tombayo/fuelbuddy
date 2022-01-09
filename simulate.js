@@ -1,15 +1,15 @@
-const SSE         = require("sse-node")
-const app         = require("express")()
-const fs          = require("fs")
-const bodyP       = require("body-parser")
-const cliP        = require('cli-progress')
-const MongoClient = require("mongodb").MongoClient
-const mongo       = new MongoClient("mongodb://192.168.2.60:27017", {useNewUrlParser:true})
-const samplename  = process.argv[2]
-const dir         = './sample-data/'+samplename+'/'
-const speed       = (typeof(process.argv[3]) !== 'undefined')?process.argv[3]:100
-const opt         = {root: __dirname}
-const bar         = new cliP.SingleBar({}, cliP.Presets.shades_classic)
+const app             = require("express")()
+const {createSession} = require("better-sse")
+const fs              = require("fs")
+const bodyP           = require("body-parser")
+const cliP            = require('cli-progress')
+//const MongoClient     = require("mongodb").MongoClient
+//const mongo           = new MongoClient("mongodb://192.168.2.60:27017", {useNewUrlParser:true})
+const samplename      = process.argv[2]
+const dir             = './sample-data/'+samplename+'/'
+const speed           = (typeof(process.argv[3]) !== 'undefined')?process.argv[3]:100
+const opt             = {root: __dirname}
+const bar             = new cliP.SingleBar({}, cliP.Presets.shades_classic)
 
 var fconf = {telemetryUpdateInterval:1000}
 var farr  = []
@@ -87,10 +87,10 @@ function sleep(ms) {
 async function runSim(SSEclient, callback) {
   for (data of farr) {
     if (typeof(data.values) !== 'undefined') {
-      SSEclient.send(data, 'telemetry')
+      SSEclient.push('telemetry', data)
       await sleep(speed) // sleeps between sending
     } else if (typeof(data.data) !== 'undefined') {
-      SSEclient.send(data, 'session')
+      SSEclient.push('session', data)
     }
   }
   callback()
@@ -102,16 +102,15 @@ function initWebServer() {
   app.get("/client.js", (req, res) => { res.sendFile('client.js',opt) })
   app.get("/client.old.backup.js", (req, res) => { res.sendFile('client.old.backup.js',opt) })
   app.get("/dump", (req, res) => { res.sendFile('dump.html',opt) })
-  app.get("/sse", (req, res) => {
+  app.get("/sse", async (req, res) => {
     console.log('Client Connected')
-    const client = SSE(req, res)
-    client.onClose(() => console.log('Client Disconnected'))
+    const client = await createSession(req, res)
 
-    client.send('Server: iRacing Simulation running @ '+(fconf.telemetryUpdateInterval/speed)+'x speed.', 'message')
+    client.push('message','Server: iRacing Simulation running @ '+(fconf.telemetryUpdateInterval/speed)+'x speed.')
 
     runSim(client, () => {
-      client.send('Server: Simulation Complete, refresh to repeat.', 'message')
-      client.send('Disconnect please', 'exit')
+      client.push('message','Server: Simulation Complete, refresh to repeat.')
+      client.push('exit', 'Disconnect please')
       console.log('Simulation Complete')
     })
     

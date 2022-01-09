@@ -16,6 +16,7 @@
   var energylapmax      = 0
   var fuelKGltrfactor   = 0.75
   var fuelUnit          = 'kg'
+  var lapArray          = []
 }
 
 String.prototype.toCamelCase = function() {
@@ -24,6 +25,41 @@ String.prototype.toCamelCase = function() {
       return p1.toLowerCase()
   });
 }
+class Lap {
+  constructor(incident, laptime, startfuel, endfuel, airtemp, tracktemp, winddirection, windvelocity, carsetup) {
+    this.incident = incident
+    this.laptime = laptime
+    this.fuel = {
+      start:        startfuel,
+      end:          endfuel,
+      consumption:  startfuel-endfuel,
+      unit:         fuelUnit
+    }
+    this.temperatures = {
+      air:          airtemp,
+      track:        tracktemp
+    }
+    this.wind = {
+      direction:    winddirection,
+      velocity:     windvelocity
+    }
+    this.carsetup = carsetup
+  }
+}
+
+function saveLapData() {
+  let lapnum = currentLap-1
+  let startfuel = document.getElementById('lap'+(lapnum-1)+'-fuel')?.getAttribute('data-rawval')
+  let endfuel = document.getElementById('lap'+(lapnum)+'-fuel')?.getAttribute('data-rawval')
+  let incidents = document.getElementById('lap'+(lapnum)+'-inc')?.getAttribute('data-lapincs')
+
+  let lap = new Lap(incidents, T.LapLastLapTime,startfuel,endfuel,T.AirTemp,T.TrackTempCrew,T.WindDir,T.WindVel,S.CarSetup)
+
+  if (lap.laptime > 0) {
+    lapArray.push(lap)
+  }
+}
+
 function numPadding(num, len, char) {
   let repnum = (len-(''+parseInt(num)).length)
   return parseInt(num) > '9'.repeat(len-1) ? num:char.repeat(repnum<0?0:repnum)+num
@@ -79,29 +115,6 @@ function updateFuel() {
   let usedFuel      = lastFuelCheck - currentFuel
 
   usedFuel = usedFuel ? usedFuel : 0 // Sometimes NaN, defaults to 0 in such case
-  
-  {
-  /** 
-    * Old code, kept for furure need:
-    * Used for adding a badge next to the fuel-level to visualize amount of fuel filled.
-    * Never accurate though, becase set refill-value isn't always actual amount refueled.
-  if (usedFuel < 0) {
-    usedFuel = usedFuel + fuelRefill
-    if (!document.getElementById('refill-'+currentLap)) {
-      let spanwrap = document.createElement('span')
-      let span     = document.createElement('span')
-      spanwrap.id = 'refill-'+currentLap
-      spanwrap.classList.add('h5')
-      span.classList.add('badge', 'badge-pill', 'badge-warning')
-      span.style.position = 'absolute'
-      span.innerHTML = '+'+fuelRefill.toFixed(1)
-      spanwrap.appendChild(span)
-      document.getElementById('lap'+currentLap+'-fuel').appendChild(spanwrap)
-      document.getElementById('lap'+currentLap+'-fuelcon').setAttribute('data-refill','true')
-    }
-  }
-  */
-  }
 
   if (usedFuel < 0) {
     // Prevent this lap from counting towards average consumption, @see calculations()
@@ -402,17 +415,18 @@ function raceOver() {
   let avgfuel = totalfuel / fueledlaps.length
 
   let jsondata = {
-    session: {
+    highlights: {
       id: S.WeekendInfo.SubSessionID,
       name: S.SessionInfo.Sessions[T.SessionNum].SessionName,
       trackname: S.WeekendInfo.TrackName,
       length: timedlaps.length,
-      avgfuel: avgfuel
+      avgfuel: avgfuel,
+      medianlaptime: medianlaptime,
+      bestlaptime: laptimes.sort()[0]
     },
-    lapstats: {
-      median: medianlaptime,
-      best: laptimes.sort()[0]
-    },
+    lastSession: S,
+    lastTelemetry: T,
+    laps: lapArray,
     car: {
       name: S.DriverInfo.Drivers[S.DriverInfo.DriverCarIdx].CarScreenNameShort
     }
@@ -552,6 +566,7 @@ function EventInit() {
       pushNewLap // Push a new lap-row to the timing-table
     ],
     newlaptiming:[ // new lap has begun, and last laptime has arrived
+      saveLapData, // Stores data about the lap for future reference
       calcTotalRaceLength, // Updates the race length calculator
       updateLastLap, // Updates the last lap-time with the accurate value from the sim
       updateMedianLapTime, // Gets median laptime thus far in the race

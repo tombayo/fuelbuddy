@@ -8,13 +8,13 @@ const conf            = {timestamp: Date.now(),telemetryUpdateInterval: 500, ses
 const opt             = {root: __dirname}
 const CLarg           = (typeof(process.argv[2]) === 'undefined') ? false:process.argv[2]
 
-const { MongoClient } = require("mongodb")
-const mongo           = new MongoClient("mongodb://192.168.2.60:27017",{useUnifiedTopology: true})
+//const { MongoClient } = require("mongodb")
+//const mongo           = new MongoClient("mongodb://192.168.2.60:27017",{useUnifiedTopology: true})
 
 irsdk.init(conf)
 
 var DBconnected       = false
-var SSEsession      = false
+var SSEsession        = false
 var iRacingConnected  = false
 var iRacing           = irsdk.getInstance()
 var trackSession      = {id:0,tick:0}
@@ -45,6 +45,7 @@ function handleData(data) {
   if (trackSession.id) saveDataToDB(data,type,trackSession.id).catch(console.dir) // only when we have our session ID, data gets saved in db
 
 }
+
 
 function ensureDirectoryExistence(filePath) {
   var dirname = path.dirname(filePath);
@@ -100,7 +101,8 @@ setInterval(() => {
   if (!iRacingConnected) SSEsend('Server: Waiting for iRacing...','message')
 },15000)
 
-// Database stuff below:
+// Database stuff below: 
+/*
 mongo.connect().then(()=>{
   console.log('Database connected.')
   DBconnected = true
@@ -111,7 +113,7 @@ mongo.connect().then(()=>{
 process.on('SIGINT', () => {
   mongo.close().then(process.exit)
 })
-
+*/
 // iRacing stuff below:
 iRacing.on('Connected',() => {
   console.log('iRacing connected.')
